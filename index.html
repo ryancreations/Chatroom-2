@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Simple Firebase Chatroom</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f0f2f5; }
+    #messages { 
+      height: 60vh; 
+      overflow-y: auto; 
+      border: 1px solid #ccc; 
+      padding: 15px; 
+      background: white; 
+      border-radius: 8px; 
+      margin-bottom: 15px; 
+    }
+    .message { margin: 8px 0; padding: 8px 12px; border-radius: 18px; max-width: 80%; }
+    .message.sent { background: #0084ff; color: white; margin-left: auto; }
+    .message.received { background: #e5e5ea; margin-right: auto; }
+    #input-area { display: flex; gap: 10px; }
+    #message-input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 20px; }
+    button { padding: 12px 24px; background: #0084ff; color: white; border: none; border-radius: 20px; cursor: pointer; }
+    button:hover { background: #006edc; }
+    #nickname { margin-bottom: 15px; }
+  </style>
+</head>
+<body>
+
+  <h2>Public Chatroom</h2>
+
+  <div id="nickname">
+    <input type="text" id="name-input" placeholder="Your nickname..." value="Guest"/>
+    <button onclick="saveNickname()">Set Name</button>
+  </div>
+
+  <div id="messages"></div>
+
+  <div id="input-area">
+    <input type="text" id="message-input" placeholder="Type a message..." />
+    <button onclick="sendMessage()">Send</button>
+  </div>
+
+  <script type="module">
+    // ───────────────────────────────────────────────
+    //   Your Firebase config (looks correct!)
+    // ───────────────────────────────────────────────
+    const firebaseConfig = {
+      apiKey: "AIzaSyCNDM2yeyVTWMU_pOQoUt6-uNOQAzHPkik",
+      authDomain: "chatroomnew-739f4.firebaseapp.com",
+      databaseURL: "https://chatroomnew-739f4-default-rtdb.firebaseio.com",
+      projectId: "chatroomnew-739f4",
+      storageBucket: "chatroomnew-739f4.firebasestorage.app",
+      messagingSenderId: "552292977529",
+      appId: "1:552292977529:web:b04e2bc662668847ba7da8",
+      measurementId: "G-SCWPR39FCD"
+    };
+
+    // Import only what we need from CDN (modular style)
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+    import { getDatabase, ref, push, onChildAdded, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+
+    // Initialize Firebase (only once!)
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const messagesRef = ref(db, 'messages');
+
+    let myNickname = localStorage.getItem("chatNickname") || "Guest";
+    document.getElementById("name-input").value = myNickname;
+
+    window.saveNickname = function() {
+      myNickname = document.getElementById("name-input").value.trim() || "Guest";
+      localStorage.setItem("chatNickname", myNickname);
+      alert("Nickname set to: " + myNickname);
+    };
+
+    window.sendMessage = function() {
+      const input = document.getElementById("message-input");
+      const text = input.value.trim();
+      if (!text) return;
+
+      push(messagesRef, {
+        name: myNickname,
+        text: text,
+        timestamp: serverTimestamp()
+      });
+
+      input.value = "";
+    };
+
+    // Listen for new messages in real-time
+    onChildAdded(messagesRef, (snapshot) => {
+      const msg = snapshot.val();
+      const div = document.createElement("div");
+      div.className = "message " + (msg.name === myNickname ? "sent" : "received");
+      div.innerHTML = `<strong>${msg.name || "Anon"}:</strong> ${msg.text}`;
+      document.getElementById("messages").appendChild(div);
+
+      // Auto-scroll to bottom
+      div.scrollIntoView({ behavior: "smooth" });
+    });
+
+    // Bonus: Send with Enter key
+    document.getElementById("message-input").addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+  </script>
+</body>
+</html>
